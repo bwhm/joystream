@@ -225,7 +225,7 @@ export default class UploadVideoCommand extends MediaCommandBase {
     await this.requestAccountDecoding(account)
 
     const filePath = "/root/Staked2.mp4" //filepath
-    const inputChannelId = 1 //channel id
+    const inputChannelId = 82 //channel id
 
     // Basic file validation
     if (!fs.existsSync(filePath)) {
@@ -363,7 +363,8 @@ export default class UploadVideoCommand extends MediaCommandBase {
     }
 
     //const license = await videoPrompter.promptSingleProp('license', () => this.promptForNewLicense())
-    const license = 16 //replace
+    const knownLicense = 16 //replace
+    const license = { new: { knownLicense } }
     /*const publishedBeforeJoystream = await videoPrompter.promptSingleProp('publishedBeforeJoystream', () =>
       this.promptForPublishedBeforeJoystream()
     )*/
