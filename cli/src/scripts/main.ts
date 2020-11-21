@@ -344,7 +344,7 @@ export default class UploadVideoCommand extends MediaCommandBase {
     ])*/
     const title:string = "My Title"
     const description:string = "My Description"
-    const thumbnailUrl:string = "My thumbnailUrl"
+    const thumbnailUrl:string = "https://ssl-static.libsyn.com/p/assets/a/4/8/f/a48f1a0697e958ce/Cover_2.png"
     const duration:number = videoMetadata?.duration ?? 1337 //length in seconds
     const isPublic:boolean = true
     const isExplicit:boolean = false
@@ -363,7 +363,7 @@ export default class UploadVideoCommand extends MediaCommandBase {
     }
 
     //const license = await videoPrompter.promptSingleProp('license', () => this.promptForNewLicense())
-    const license = 84 //replace
+    const license = 16 //replace
     /*const publishedBeforeJoystream = await videoPrompter.promptSingleProp('publishedBeforeJoystream', () =>
       this.promptForPublishedBeforeJoystream()
     )*/
@@ -388,7 +388,7 @@ export default class UploadVideoCommand extends MediaCommandBase {
     }
 
     this.jsonPrettyPrint(JSON.stringify(videoInput))
-    //await this.requireConfirmation('Do you confirm the provided input?')
+    await this.requireConfirmation('Do you confirm the provided input?')
 
     // Parse inputs into operations and send final extrinsic
     const inputParser = InputParser.createWithKnownSchemas(this.getOriginalApi(), [
