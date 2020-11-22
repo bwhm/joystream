@@ -220,7 +220,7 @@ export default class UploadMultiVideoCommand extends MediaCommandBase {
     }
   }
 
-  async run() {
+  async run(): Promise<boolean> {
 
     const account = await this.getRequiredSelectedAccount()
     const memberId = await this.getRequiredMemberId()
@@ -376,6 +376,7 @@ export default class UploadMultiVideoCommand extends MediaCommandBase {
       },
     ])
     const operations = await inputParser.getEntityBatchOperations()
-    await this.sendAndFollowNamedTx(account, 'contentDirectory', 'transaction', [actor, operations])
+    const confirmed = await this.sendAndFollowNamedTx(account, 'contentDirectory', 'transaction', [actor, operations])
+    return confirmed
   }
 }
