@@ -20,6 +20,8 @@ import toBuffer from 'it-to-buffer'
 import ffprobeInstaller from '@ffprobe-installer/ffprobe'
 import ffmpeg from 'fluent-ffmpeg'
 import MediaCommandBase from '../base/MediaCommandBase'
+//import * as videoInputs from `./inputs`
+import { input } from './inputs'
 
 ffmpeg.setFfprobePath(ffprobeInstaller.path)
 
@@ -34,7 +36,8 @@ type VideoMetadata = {
   duration?: number
 }
 
-export default class UploadVideoCommand extends MediaCommandBase {
+
+export default class UploadMultiVideoCommand extends MediaCommandBase {
   static description = 'Upload a new Video to a channel (requires a membership).'
   static flags = {
     // TODO: ...IOFlags, - providing input as json
@@ -48,9 +51,9 @@ export default class UploadVideoCommand extends MediaCommandBase {
 
   static args = [
     {
-      name: 'filePath',
+      name: 'id',
       required: true,
-      description: 'Path to the media file to upload',
+      description: 'id of input',
     },
   ]
 
@@ -218,14 +221,35 @@ export default class UploadVideoCommand extends MediaCommandBase {
   }
 
   async run() {
+
     const account = await this.getRequiredSelectedAccount()
     const memberId = await this.getRequiredMemberId()
     const actor = { Member: memberId }
 
     await this.requestAccountDecoding(account)
 
-    const filePath = "/root/Staked2.mp4" //filepath
-    const inputChannelId = 82 //channel id
+    const {
+      args: { id },
+    } = this.parse(UploadMultiVideoCommand)
+
+    const i = parseInt(id)
+    //const input:FullVideoInput[] = videoInputs
+    const filePath = input[i].filePath
+    const encoding = input[i].encoding
+    const inputChannelId = input[i].channel
+    const category = input[i].category
+    const title = input[i].title
+    const description = input[i].description
+    const skippableIntroDuration = input[i].skippableIntroDuration
+    const thumbnailUrl = input[i].thumbnailUrl
+    const language = input[i].language
+    const hasMarketing = input[i].hasMarketing
+    const publishedBeforeJoystream = input[i].publishedBeforeJoystream
+    const isPublic = input[i].isPublic
+    const isExplicit = input[i].isExplicit
+    const knownLicense = input[i].license
+    //ignoring unknown for now
+    const license = { new: { knownLicense } }
 
     // Basic file validation
     if (!fs.existsSync(filePath)) {
@@ -308,48 +332,9 @@ export default class UploadVideoCommand extends MediaCommandBase {
       pixelWidth: videoMetadata?.width,
       pixelHeight: videoMetadata?.height,
     }
-    // Create prompting helpers
-    /*const videoJsonSchema = (VideoEntitySchema as unknown) as JSONSchema
-    const videoMediaJsonSchema = (VideoMediaEntitySchema as unknown) as JSONSchema
-
-    const videoMediaPrompter = new JsonSchemaPrompter<VideoMediaEntity>(videoMediaJsonSchema, videoMediaDefaults)
-    const videoPrompter = new JsonSchemaPrompter<VideoEntity>(videoJsonSchema, videoDefaults)
-
-    */
-    // Prompt for the data
-    //const encodingSuggestion =
-      //videoMetadata && videoMetadata.codecFullName ? ` (suggested: ${videoMetadata.codecFullName})` : ''
-      const encoding = 63 // H.264_MP4
-      /*const encoding = await this.promptForEntityId(
-        `Choose Video encoding${encodingSuggestion}`,
-        'VideoMediaEncoding',
-        'name'
-      )*/
     const pixelWidth = videoMediaDefaults.pixelWidth ?? 1337
     const pixelHeight = videoMediaDefaults.pixelHeight ?? 1337
-    //const { pixelWidth, pixelHeight } = await videoMediaPrompter.promptMultipleProps(['pixelWidth', 'pixelHeight'])
-    //const language = await this.promptForEntityId('Choose Video language', 'Language', 'name')
-    //const category = await this.promptForEntityId('Choose Video category', 'ContentCategory', 'name')
-    const language = 22 // english
-    const category = 14 //science and tech
-    /*const videoProps = await videoPrompter.promptMultipleProps([
-      'title',
-      'description',
-      'thumbnailUrl',
-      'duration',
-      'isPublic',
-      'isExplicit',
-      'hasMarketing',
-      'skippableIntroDuration',
-    ])*/
-    const title:string = "My Title"
-    const description:string = "My Description"
-    const thumbnailUrl:string = "https://ssl-static.libsyn.com/p/assets/a/4/8/f/a48f1a0697e958ce/Cover_2.png"
     const duration:number = videoMetadata?.duration ?? 1337 //length in seconds
-    const isPublic:boolean = true
-    const isExplicit:boolean = false
-    const hasMarketing:boolean = false
-    const skippableIntroDuration:number = 0
 
     const videoProps = {
       title,
@@ -361,14 +346,6 @@ export default class UploadVideoCommand extends MediaCommandBase {
       hasMarketing,
       skippableIntroDuration,
     }
-
-    //const license = await videoPrompter.promptSingleProp('license', () => this.promptForNewLicense())
-    const knownLicense = 16 //replace
-    const license = { new: { knownLicense } }
-    /*const publishedBeforeJoystream = await videoPrompter.promptSingleProp('publishedBeforeJoystream', () =>
-      this.promptForPublishedBeforeJoystream()
-    )*/
-    const publishedBeforeJoystream = null //keep
 
     // Create final inputs
     const videoMediaInput: VideoMediaEntity = {
@@ -402,4 +379,3 @@ export default class UploadVideoCommand extends MediaCommandBase {
     await this.sendAndFollowNamedTx(account, 'contentDirectory', 'transaction', [actor, operations])
   }
 }
-UploadVideoCommand.run()
