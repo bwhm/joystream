@@ -259,6 +259,15 @@ export default abstract class AccountsCommandBase extends ApiCommandBase {
     return memberIds[0].toNumber() // FIXME: Temporary solution (just using the first one)
   }
 
+  async getRequiredMemberIdSudoAs(account:string): Promise<number> {
+    const memberIds = await this.getApi().getMemberIdsByControllerAccount(account)
+    if (!memberIds.length) {
+      this.error('Membership required to access this command!', { exit: ExitCodes.AccessDenied })
+    }
+
+    return memberIds[0].toNumber() // FIXME: Temporary solution (just using the first one)
+  }
+
   async init() {
     await super.init()
     try {

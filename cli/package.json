@@ -107,6 +107,9 @@
       },
       "content": {
         "description": "Interactions with content directory module - managing vidoes, channels, assets, categories and curator groups"
+      },
+      "content-as-sudo": {
+        "description": "Interactions with content directory module - managing vidoes, channels, assets, categories and curator groups - with sudoAs"
       }
     }
   },

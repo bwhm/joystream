@@ -418,6 +418,20 @@ export default abstract class ApiCommandBase extends StateAwareCommandBase {
     }
   }
 
+  async sendAndFollowNamedSudoAsTx(
+    sudoKey: KeyringPair,
+    account: string,
+    module: string,
+    method: string,
+    params: CodecArg[],
+    warnOnly = false
+  ): Promise<boolean> {
+    const tx = await this.getOriginalApi().tx[module][method](...params)
+    const sudoAsTx = await this.getOriginalApi().tx.sudo.sudoAs(account,tx)
+    this.log(chalk.magentaBright(`\nSending ${module}.${method} extrinsic...`))
+    return await this.sendAndFollowTx(sudoKey, sudoAsTx, warnOnly)
+  }
+
   async sendAndFollowNamedTx(
     account: KeyringPair,
     module: string,
@@ -439,6 +453,20 @@ export default abstract class ApiCommandBase extends StateAwareCommandBase {
   ): Promise<ApiMethodArg[]> {
     const params = await this.promptForExtrinsicParams(module, method, paramsOptions)
     await this.sendAndFollowNamedTx(account, module, method, params, warnOnly)
+
+    return params
+  }
+
+  async buildAndSendSudoAsExtrinsic(
+    sudoKey: KeyringPair,
+    account: string,
+    module: string,
+    method: string,
+    paramsOptions?: ApiParamsOptions,
+    warnOnly = false // If specified - only warning will be displayed (instead of error beeing thrown)
+  ): Promise<ApiMethodArg[]> {
+    const params = await this.promptForExtrinsicParams(module, method, paramsOptions)
+    await this.sendAndFollowNamedSudoAsTx(sudoKey, account, module, method, params, warnOnly)
 
     return params
   }

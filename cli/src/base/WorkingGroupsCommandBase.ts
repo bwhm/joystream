@@ -41,11 +41,38 @@ export abstract class RolesCommandBase extends AccountsCommandBase {
     return lead
   }
 
+  async getRequiredLeadAsSudo(account: string): Promise<GroupMember> {
+    const lead = await this.getApi().groupLead(this.group)
+
+    if (!lead || lead.roleAccount.toString() !== account) {
+      this.error(`${_.startCase(this.group)} Group Lead access required for this command!`, {
+        exit: ExitCodes.AccessDenied,
+      })
+    }
+
+    return lead
+  }
+
   // Use when worker access is required in given command
   async getRequiredWorker(): Promise<GroupMember> {
     const selectedAccount: NamedKeyringPair = await this.getRequiredSelectedAccount()
     const groupMembers = await this.getApi().groupMembers(this.group)
     const groupMembersByAccount = groupMembers.filter((m) => m.roleAccount.toString() === selectedAccount.address)
+
+    if (!groupMembersByAccount.length) {
+      this.error(`${_.startCase(this.group)} Group Worker access required for this command!`, {
+        exit: ExitCodes.AccessDenied,
+      })
+    } else if (groupMembersByAccount.length === 1) {
+      return groupMembersByAccount[0]
+    } else {
+      return await this.promptForWorker(groupMembersByAccount)
+    }
+  }
+
+  async getRequiredWorkerAsSudo(account: string): Promise<GroupMember> {
+    const groupMembers = await this.getApi().groupMembers(this.group)
+    const groupMembersByAccount = groupMembers.filter((m) => m.roleAccount.toString() === account)
 
     if (!groupMembersByAccount.length) {
       this.error(`${_.startCase(this.group)} Group Worker access required for this command!`, {

@@ -77,6 +77,10 @@ export default abstract class ContentDirectoryCommandBase extends RolesCommandBa
     await this.getRequiredLead()
   }
 
+  async requireLeadAsSudo(account: string): Promise<void> {
+    await this.getRequiredLeadAsSudo(account)
+  }
+
   async getCurationActorByChannel(channel: Channel): Promise<ContentActor> {
     return channel.owner.isOfType('Curators') ? await this.getActor('Lead') : await this.getActor('Curator')
   }
@@ -93,6 +97,18 @@ export default abstract class ContentDirectoryCommandBase extends RolesCommandBa
     }
   }
 
+  async getChannelOwnerActorAsSudo(account: string, channel: Channel): Promise<ContentActor> {
+    if (channel.owner.isOfType('Curators')) {
+      try {
+        return await this.getActor('Lead')
+      } catch (e) {
+        return await this.getCuratorContext(channel.owner.asType('Curators'))
+      }
+    } else {
+      return await this.getSudoAsActor(account, 'Member')
+    }
+  }
+
   async getCategoryManagementActor(): Promise<ContentActor> {
     try {
       return await this.getActor('Lead')
@@ -103,6 +119,42 @@ export default abstract class ContentDirectoryCommandBase extends RolesCommandBa
 
   async getCuratorContext(requiredGroupId?: CuratorGroupId): Promise<ContentActor> {
     const curator = await this.getRequiredWorker()
+
+    let groupId: number
+    if (requiredGroupId) {
+      const group = await this.getCuratorGroup(requiredGroupId.toNumber())
+      if (!group.active.valueOf()) {
+        this.error(`Curator group ${requiredGroupId.toString()} is no longer active`, { exit: ExitCodes.AccessDenied })
+      }
+      if (!group.curators.toArray().some((curatorId) => curatorId.eq(curator.workerId))) {
+        this.error(`You don't belong to required curator group (ID: ${requiredGroupId.toString()})`, {
+          exit: ExitCodes.AccessDenied,
+        })
+      }
+      groupId = requiredGroupId.toNumber()
+    } else {
+      const groups = await this.getApi().availableCuratorGroups()
+      const availableGroupIds = groups
+        .filter(
+          ([, group]) =>
+            group.active.valueOf() && group.curators.toArray().some((curatorId) => curatorId.eq(curator.workerId))
+        )
+        .map(([id]) => id)
+
+      if (!availableGroupIds.length) {
+        this.error("You don't belong to any active curator group!", { exit: ExitCodes.AccessDenied })
+      } else if (availableGroupIds.length === 1) {
+        groupId = availableGroupIds[0].toNumber()
+      } else {
+        groupId = await this.promptForCuratorGroup('Select Curator Group context', availableGroupIds)
+      }
+    }
+
+    return createType('ContentActor', { Curator: [groupId, curator.workerId.toNumber()] })
+  }
+
+  async getCuratorContextAsSudo(account: string, requiredGroupId?: CuratorGroupId): Promise<ContentActor> {
+    const curator = await this.getRequiredWorkerAsSudo(account)
 
     let groupId: number
     if (requiredGroupId) {
@@ -235,6 +287,21 @@ export default abstract class ContentDirectoryCommandBase extends RolesCommandBa
       actor = await this.getCuratorContext()
     } else {
       await this.getRequiredLead()
+
+      actor = this.createType('ContentActor', { Lead: null })
+    }
+
+    return actor
+  }
+  async getSudoAsActor(account: string, context: typeof CONTEXTS[number]) {
+    let actor: ContentActor
+    if (context === 'Member') {
+      const memberId = await this.getRequiredMemberIdSudoAs(account)
+      actor = this.createType('ContentActor', { Member: memberId })
+    } else if (context === 'Curator') {
+      actor = await this.getCuratorContextAsSudo(account)
+    } else {
+      await this.getRequiredLeadAsSudo(account)
 
       actor = this.createType('ContentActor', { Lead: null })
     }
